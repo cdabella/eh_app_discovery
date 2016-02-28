@@ -58,7 +58,7 @@ class Discoverer(object):
 
             for metric in device['device_metrics']:
                 if (key in metric.key.str):
-                    
+
 
 
     def _make_tag(self, tag):
@@ -89,7 +89,7 @@ class Discoverer(object):
         mc = metric_components[3].split('_')
         for i in range(0,len(mc)):
             # if mc[i] is server or client, the previous index holds the protocol
-            if (mc[i] == 'server' || mc[i] == 'client'):
+            if (mc[i] == 'server' or mc[i] == 'client'):
                 return mc[i-1] + '_' + mc[i]
 
 
