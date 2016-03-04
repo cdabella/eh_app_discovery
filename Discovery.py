@@ -80,7 +80,16 @@ class Discoverer(object):
             self.devices_cache_ts   = time.time()
             self.devices_cache_type = device_type
 
-        if ((self.devices_cache_metric_category != metric_category) or
+            # If new devices, must update metrics.
+            self.devices_cache_metric_category = metric_category
+            self.devices_cache_metric          = metric
+
+            # Populate device list with the metric
+            for i in range(0, len(self.devices_cache)):
+                device_id = self.devices_cache[i]['id']
+                self.devices_cache[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
+
+        elif ((self.devices_cache_metric_category != metric_category) or
             (self.devices_cache_metric != metric)):
 
             self.devices_cache_metric_category = metric_category
