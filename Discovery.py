@@ -1,17 +1,31 @@
 from Ehop import Ehop
 import json
+import time
 
 class Discoverer(object):
     """An application disc"""
 
 
-    def __init__(self, apikey='', host='', lookback=-86400000):
-        self.apikey   = apikey
-        self.host     = host
+    def __init__(self,
+                 apikey='',
+                 host='',
+                 lookback=-86400000,        # 1 day in milliseconds
+                 device_cache_ttl=1800):    # 30 minutes in seconds
 
-        self.client   = Ehop(self.apikey, self.host)
-        self.lookback = lookback
 
+        self.apikey       = apikey
+        self.host         = host
+
+        self.client       = Ehop(self.apikey, self.host)
+        self.lookback     = lookback
+
+        self.devices_cache      = []
+        self.devices_cache_type = None
+        self.devices_cache_ttl  = device_cache_ttl
+        self.devices_cache_ts   = 0
+
+        self.devices_cache_metric_category = None
+        self.devices_cache_metric          = None
     def get_devices_by_type(self, type):
 
         query = 'devices?' +                                \
@@ -56,23 +70,38 @@ class Discoverer(object):
         # Determine the device type required for the metric category
         device_type = self._process_metric_category(metric_category)
 
-        # Get a list of all devices of that device type
-        devices     = self.get_devices_by_type(device_type)
+        # Reduce excess API calls be using cache of devices
+        # If the cache is older than the cache TTL or looking at a different
+        # type of device, update the device cache
+        if ((device_type != self.devices_cache_type) or
+            ((self.devices_cache_ts + self.devices_cache_ttl) < time.time())):
 
-        # Populate device list with the metric
-        for i in range(0, len(devices)):
-            device_id = devices[i]['id']
-            devices[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
+            self.devices_cache      = self.get_devices_by_type(device_type)
+            self.devices_cache_ts   = time.time()
+            self.devices_cache_type = device_type
+
+        if ((self.devices_cache_metric_category != metric_category) or
+            (self.devices_cache_metric != metric)):
+
+            self.devices_cache_metric_category = metric_category
+            self.devices_cache_metric          = metric
+
+            # Populate device list with the metric
+            for i in range(0, len(self.devices_cache)):
+                device_id = self.devices_cache[i]['id']
+                self.devices_cache[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
 
         # From this point, functionality can diverge.
         # A) Find known identifiers and tag accordingly.
         # B) Group all detail metrics and determine possible identifiers
         # This function will implement (A)
 
-        for device in devices:
+        for device in self.devices_cache:
             if (type(device['device_metrics']) is not list):
                 raise ValueError('Expecting list (Topnset)', device['device_metrics'])
 
+            # TODO support case insensitive
+            # TODO support regular expression
             for metric in device['device_metrics']:
                 if (key in metric['key']['str']):
                     self.tag_device(device['id'],tag_id)
