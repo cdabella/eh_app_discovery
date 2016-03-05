@@ -1,6 +1,7 @@
 from Ehop import Ehop
 import json
 import time
+import re
 
 class Discoverer(object):
     """An application disc"""
@@ -107,13 +108,44 @@ class Discoverer(object):
 
         for device in self.devices_cache:
             if (type(device['device_metrics']) is not list):
-                raise ValueError('Expecting list (Topnset)', device['device_metrics'])
+                raise ValueError('Expecting list (Topnset)',
+                                 device['device_metrics'])
 
-            # TODO support case insensitive
-            # TODO support regular expression
+
             for metric in device['device_metrics']:
-                if (key in metric['key']['str']):
-                    self.tag_device(device['id'],tag_id)
+
+                # If strict string matching
+                if (key['type'] == 'string'):
+                    if (key['value'] in metric['key']['str']):
+                        self.tag_device(device['id'],tag_id)
+
+                # If regex (used for case insensitive)
+                elif (key['type'] == 'regex'):
+
+                    # Regexs stored in forward slash notation
+                    # Strip slashes and check for i flag
+                    (regex_string,i_flag) = self._process_regex(key['value'])
+                    if (i_flag):
+                        if (re.search(regex_string, metric['key']['str'], re.I) != None):
+                            self.tag_device(device['id'],tag_id)
+                    else:
+                        if (re.search(regex_string, metric['key']['str']) != None):
+                            self.tag_device(device['id'],tag_id)
+                else:
+                    raise ValueError('Unexpected metric key type', key['type'], key['value'])
+
+    def _process_regex(self, regex):
+        assert (regex.index('/') == 0), 'Regex does not follow forward-slash notation: ' + regex
+        last_slash = regex.rfind('/')
+
+        assert (last_slash != 0), 'Regex does not follow forward-slash notation: ' + regex
+
+        regex_string = regex[1:last_slash]
+        flag_string  = regex[last_slash:]
+
+        # i in regex flags indicates case insensitive
+        return (regex_string, ('i' in flag_string))
+
 
 
     def _make_tag(self, tag):
