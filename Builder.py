@@ -32,10 +32,17 @@ def main():
     print "Config file processed..."
 
 def create_discoverer():
-    host   = raw_input('ExtraHop hostname or IP: ')
-    apikey = raw_input('API key: ')
+    if os.path.isfile("keys"):
+        print "Found local key file containing host and apikey"
+        with open('keys') as data_file:
+            data = json.load(data_file)
+            for key in data:
+                host = key
+                apikey = data[key]
+    else:
+        host   = raw_input('ExtraHop hostname or IP: ')
+        apikey = raw_input('API key: ')
     print ''
-
     return Discoverer(apikey,host)
 
 def load_json_file():
