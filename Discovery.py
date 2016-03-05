@@ -2,6 +2,8 @@ from Ehop import Ehop
 import json
 import time
 import re
+import time
+import sys
 
 class Discoverer(object):
     """An application disc"""
@@ -87,6 +89,9 @@ class Discoverer(object):
 
             # Populate device list with the metric
             for i in range(0, len(self.devices_cache)):
+                progress = float(i)/len(self.devices_cache)
+                sys.stdout.write("\r%.4f%%" % progress)
+                sys.stdout.flush()
                 device_id = self.devices_cache[i]['id']
                 self.devices_cache[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
 
@@ -98,6 +103,10 @@ class Discoverer(object):
 
             # Populate device list with the metric
             for i in range(0, len(self.devices_cache)):
+                progress = float(i)/len(self.devices_cache)
+                print progress
+                sys.stdout.write("\r%.4f%%" % progress)
+                sys.stdout.flush()
                 device_id = self.devices_cache[i]['id']
                 self.devices_cache[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
 
