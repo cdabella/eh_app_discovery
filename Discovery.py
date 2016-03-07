@@ -2,6 +2,7 @@ from Ehop import Ehop
 import json
 import time
 import re
+import sys
 
 class Discoverer(object):
     """An application disc"""
@@ -11,7 +12,8 @@ class Discoverer(object):
                  apikey='',
                  host='',
                  lookback=-86400000,        # 1 day in milliseconds
-                 device_cache_ttl=1800):    # 30 minutes in seconds
+                 device_cache_ttl=1800,     # 30 minutes in seconds
+                 verbose=True):
 
 
         self.apikey       = apikey
@@ -27,6 +29,9 @@ class Discoverer(object):
 
         self.devices_cache_metric_category = None
         self.devices_cache_metric          = None
+
+        self.verbose = verbose
+
     def get_devices_by_type(self, type):
 
         query = 'devices?' +                                \
@@ -87,6 +92,9 @@ class Discoverer(object):
 
             # Populate device list with the metric
             for i in range(0, len(self.devices_cache)):
+                if (self.verbose):
+                    self._print_status_bar(i, len(self.devices_cache))
+                
                 device_id = self.devices_cache[i]['id']
                 self.devices_cache[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
 
@@ -98,6 +106,9 @@ class Discoverer(object):
 
             # Populate device list with the metric
             for i in range(0, len(self.devices_cache)):
+                if (self.verbose):
+                    self._print_status_bar(i, len(self.devices_cache))
+
                 device_id = self.devices_cache[i]['id']
                 self.devices_cache[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
 
@@ -133,6 +144,13 @@ class Discoverer(object):
                             self.tag_device(device['id'],tag_id)
                 else:
                     raise ValueError('Unexpected metric key type', key['type'], key['value'])
+
+    def _print_status_bar(self, numerator, denominator):
+        assert denominator > 0, 'Denominator cannot be zero'
+        progress = float(numerator)/denominator
+        sys.stdout.write("\r%.4f%%" % progress)
+        sys.stdout.flush()
+
 
     def _process_regex(self, regex):
         assert (regex.index('/') == 0), 'Regex does not follow forward-slash notation: ' + regex
