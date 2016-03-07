@@ -1,11 +1,20 @@
 [
     {
-        "metric_category" : "extrahop.device.uri_http_server_detail",
+        "metric_category" : "extrahop.device.uri_http_client_detail",
         "metric"          : "req",
         "metric_key"      : {
                                 "type" : "string",
-                                "value"  : "HSWeb_"
+                                "value"  : "extrahop"
                             },
-        "device_tag"      : "Test Tag"
+        "device_tag"      : "ExtraHop Client"
+    },
+    {
+        "metric_category" : "extrahop.device.uri_http_client_detail",
+        "metric"          : "req",
+        "metric_key"      : {
+                                "type" : "regex",
+                                "value"  : "/extrahop/i"
+                            },
+        "device_tag"      : "ExtraHop Client using regex"
     }
 ]
