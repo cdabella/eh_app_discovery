@@ -32,6 +32,60 @@ class Discoverer(object):
 
         self.verbose = verbose
 
+    def load_all_active_devices_into_cache(self):
+        offset = 0
+        query_limit = 100
+
+        while True:
+            query = 'devices?' +                                \
+                    'limit=' + str(query_limit) + '&' +         \
+                    'search_type=any&' +                        \
+                    'offset=' + str(offset) + '&'               \
+                    'active_from=' + str(self.lookback) + '&' + \
+                    'active_until=0'
+
+            results = json.loads(self.client.api_request('GET',
+                                           query))
+
+            self.devices_cache += results
+
+            if len(results) < query_limit:
+                break
+
+            offset += query_limit
+        self.devices_cache_ts   = time.time()
+        self.devices_cache_type = 'any'
+
+    def filter_cached_devices(self):
+        initial_device_count = len(self.devices_cache)
+
+        self.devices_cache = filter(lambda device: device['is_l3'] == True, self.devices_cache)
+        self.devices_cache = filter(lambda device: device['analysis_level'] != 0, self.devices_cache)
+
+        devices_removed = initial_device_count - len(self.devices_cache)
+        if self.verbose:
+            print 'Filtered %s by removing non-L3 and limited analysis devices' % devices_removed
+
+    def add_device_metrics_to_cache(self, metric_category, metric):
+
+        # If new devices, must update metrics.
+        self.devices_cache_metric_category = metric_category
+        self.devices_cache_metric          = metric
+
+        # Populate device list with the metric
+        for i in range(0, len(self.devices_cache)):
+            if (self.verbose):
+                self._print_status_bar(i, len(self.devices_cache))
+
+            device_id = self.devices_cache[i]['id']
+
+            if 'device_metrics' not in self.devices_cache[i]:
+                self.devices_cache[i]['device_metrics'] = {}
+            if metric_category not in self.devices_cache[i]['device_metrics']:
+                self.devices_cache[i]['device_metrics'][metric_category] = {}
+
+            self.devices_cache[i]['device_metrics'][metric_category][metric] = self.get_device_metrics(device_id, metric_category, metric)
+
     def get_devices_by_type(self, type):
 
         query = 'devices?' +                                \
@@ -44,6 +98,7 @@ class Discoverer(object):
 
         return json.loads(self.client.api_request('GET',
                                        query))
+
 
     def get_device_metrics(self, device_id, metric_category, metric):
 
@@ -94,7 +149,7 @@ class Discoverer(object):
             for i in range(0, len(self.devices_cache)):
                 if (self.verbose):
                     self._print_status_bar(i, len(self.devices_cache))
-                
+
                 device_id = self.devices_cache[i]['id']
                 self.devices_cache[i]['device_metrics'] = self.get_device_metrics(device_id, metric_category, metric)
 
@@ -147,8 +202,8 @@ class Discoverer(object):
 
     def _print_status_bar(self, numerator, denominator):
         assert denominator > 0, 'Denominator cannot be zero'
-        progress = float(numerator)/denominator
-        sys.stdout.write("\r%.4f%%" % progress)
+        progress = float(numerator)/denominator * 100
+        sys.stdout.write("\r%.2f%%" % progress)
         sys.stdout.flush()
 
 
